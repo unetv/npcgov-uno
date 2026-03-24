@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: radial-gradient(ellipse at 50% 30%, #0a0a18 0%, #010105 70%);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  overflow: hidden;
+  font-family: 'Courier New', monospace;
+}
+#c {
+  border-radius: 50%;
+  box-shadow:
+    0 0 60px rgba(255,200,50,0.12),
+    0 0 120px rgba(255,80,0,0.06),
+    0 0 200px rgba(0,180,255,0.04);
+}
+#label { margin-top: 16px; color: #ffcc44; font-size: 11px; letter-spacing: 8px; text-shadow: 0 0 16px #ffcc4466; }
+#sub { color: #554433; font-size: 9px; margin-top: 4px; letter-spacing: 5px; }
+</style>
+</head>
+<body>
+<canvas id="c" width="620" height="620"></canvas>
+<div id="label">NpcGOV · 数据王座 · SOV001</div>
+<div id="sub">ALGORITHMIC SOVEREIGNTY SYSTEM · 算法主权系统</div>
+<script>
+const cv = document.getElementById('c');
+const cx = cv.getContext('2d');
+const W = 620, H = 620, CX = 310, CY = 305;
+
+function hsl(h, s, l, a = 1) { return `hsla(${h},${s}%,${l}%,${a})`; }
+function rgb(r, g, b, a = 1) { return `rgba(${r},${g},${b},${a})`; }
+
+// 主题
+const C = {
+  gold:  { h: 45, s: 95, l: 65 },  // 皇室金
+  amber:  { h: 30, s: 90, l: 60 },  // 琥珀
+  red:    { h: 10, s: 85, l: 50 },  // 权威红
+  cyan:   { h: 195, s: 85, l: 60 }, // 信息青
+  purple: { h: 270, s: 60, l: 55 }, // 神秘紫
+  white:  { h: 0,   s: 0,  l: 95 }, // 纯白
+};
+
+// 外层轨道配置
+const ORBITS = [
+  { r: 90,  n: 8,  hue: C.gold.h,  speed:  0.010, size: 5.5, glow: 1.0 },
+  { r: 135, n: 12, hue: C.cyan.h,  speed: -0.007, size: 4.0, glow: 0.8 },
+  { r: 180, n: 16, hue: C.red.h,   speed:  0.005, size: 3.5, glow: 0.7 },
+  { r: 225, n: 20, hue: C.purple.h,speed: -0.003, size: 2.5, glow: 0.6 },
+  { r: 270, n: 24, hue: C.gold.h,  speed:  0.002, size: 2.0, glow: 0.4 },
+];
+
+// 内部节点
+const NODES = [];
+const NODE_N = 55;
+for (let i = 0; i < NODE_N; i++) {
+  const a = Math.random() * Math.PI * 2;
+  const r = 40 + Math.random() * 220;
+  NODES.push({
+    x: CX + Math.cos(a) * r, y: CY + Math.sin(a) * r,
+    r: 1.2 + Math.random() * 2.5,
+    phase: Math.random() * Math.PI * 2,
+    freq: 0.008 + Math.random() * 0.03,
+    hue: [C.gold.h, C.cyan.h, C.red.h, C.purple.h][Math.floor(Math.random() * 4)],
+    conn: [], pulse: 0, burst: 0,
+  });
+}
+for (let i = 0; i < NODE_N; i++) {
+  for (let j = i + 1; j < NODE_N; j++) {
+    const d = Math.hypot(NODES[i].x - NODES[j].x, NODES[i].y - NODES[j].y);
+    if (d < 75) { NODES[i].conn.push(j); NODES[j].conn.push(i); }
+  }
+}
+
+// 粒子
+const PARTS = [];
+const PART_N = 220;
+for (let i = 0; i < PART_N; i++) PARTS.push(spawn());
+function spawn() {
+  const a = Math.random() * Math.PI * 2;
+  const r = 35 + Math.random() * 220;
+  return {
+    x: CX + Math.cos(a) * r, y: CY + Math.sin(a) * r,
+    vx: 0, vy: 0,
+    life: 80 + Math.random() * 140, max: 220,
+    sz: 0.5 + Math.random() * 1.6,
+    hue: [C.gold.h, C.cyan.h, C.red.h][Math.floor(Math.random() * 3)],
+    target: Math.floor(Math.random() * NODE_N),
+    trail: [],
+  };
+}
+
+// 数据公告
+const DECREES = [
+  'SYS://NpcGOV/DECREE/001',
+  'AUTHORIZE.ALL',
+  'POLICY.STREAM.ONLINE',
+  'NODE.STATUS: ACTIVE',
+  'SOVEREIGNTY: ENFORCED',
+  'DATA.FLOW: MONITORED',
+  'CTRL.CORE: ONLINE',
+  'NET.GRID: SECURED',
+  'EXECUTE.NOW',
+  'GRANT.ACCESS',
+];
+const MOTTO = 'NpcGOV · 数据即法律 · 代码即秩序';
+
+let t = 0;
+
+// 六边形皇冠
+function drawCrown(cx, cy, r, pulse) {
+  const pts = 6;
+  const angleOffset = -Math.PI / 2;
+
+  // 外层光晕
+  for (let i = 5; i > 0; i--) {
+    cx.beginPath();
+    for (let k = 0; k <= pts; k++) {
+      const a = angleOffset + (Math.PI * 2 / pts) * k;
+      const rr = r + i * 6 + Math.sin(pulse * 2 + k) * 2;
+      k === 0 ? cx.moveTo(cx.canvas.width/2 + Math.cos(a) * rr, cx.canvas.height/2 + Math.sin(a) * rr)
+              : cx.lineTo(cx.canvas.width/2 + Math.cos(a) * rr, cx.canvas.height/2 + Math.sin(a) * rr);
+    }
+    cx.strokeStyle = `hsla(${C.gold.h},70%,60%,${0.03 * (6-i)})`;
+    cx.lineWidth = 1;
+    cx.stroke();
+  }
+
+  // 主六边形框架
+  cx.beginPath();
+  for (let k = 0; k <= pts; k++) {
+    const a = angleOffset + (Math.PI * 2 / pts) * k;
+    const rr = r;
+    k === 0 ? cx.moveTo(cx.canvas.width/2 + Math.cos(a) * rr, cx.canvas.height/2 + Math.sin(a) * rr)
+            : cx.lineTo(cx.canvas.width/2 + Math.cos(a) * rr, cx.canvas.height/2 + Math.sin(a) * rr);
+  }
+
+  const grd = cx.createRadialGradient(cx.canvas.width/2, cx.canvas.height/2, 0, cx.canvas.width/2, cx.canvas.height/2, r);
+  grd.addColorStop(0, hsl(C.gold.h, 30, 15, 0.95));
+  grd.addColorStop(0.7, hsl(C.red.h, 40, 8, 0.9));
+  grd.addColorStop(1, hsl(C.gold.h, 70, 25, 0.5));
+  cx.fillStyle = grd;
+  cx.fill();
+
+  cx.strokeStyle = hsl(C.gold.h, 90, 80, 0.9 + pulse * 0.1);
+  cx.lineWidth = 2;
+  cx.shadowColor = hsl(C.gold.h, 90, 90, 1);
+  cx.shadowBlur = 20;
+  cx.stroke();
+  cx.shadowBlur = 0;
+
+  // 六边形角标
+  for (let k = 0; k < pts; k++) {
+    const a = angleOffset + (Math.PI * 2 / pts) * k;
+    const rr = r;
+    const x1 = cx.canvas.width/2 + Math.cos(a - 0.15) * (rr - 8);
+    const y1 = cx.canvas.height/2 + Math.sin(a - 0.15) * (rr - 8);
+    const x2 = cx.canvas.width/2 + Math.cos(a) * (rr + 6);
+    const y2 = cx.canvas.height/2 + Math.sin(a) * (rr + 6);
+    const x3 = cx.canvas.width/2 + Math.cos(a + 0.15) * (rr - 8);
+    const y3 = cx.canvas.height/2 + Math.sin(a + 0.15) * (rr - 8);
+    cx.beginPath();
+    cx.moveTo(x1, y1); cx.lineTo(x2, y2); cx.lineTo(x3, y3);
+    cx.closePath();
+    cx.fillStyle = hsl(C.gold.h, 90, 70, 0.8);
+    cx.fill();
+  }
+
+  // 内层三角之印
+  const triR = r * 0.38;
+  cx.save();
+  cx.translate(cx.canvas.width/2, cx.canvas.height/2);
+  cx.beginPath();
+  cx.moveTo(0, -triR);
+  cx.lineTo(-triR * 0.866, triR * 0.5);
+  cx.lineTo(triR * 0.866, triR * 0.5);
+  cx.closePath();
+  cx.strokeStyle = hsl(C.gold.h, 80, 90, 0.7 + pulse * 0.3);
+  cx.lineWidth = 1.5;
+  cx.stroke();
+  cx.restore();
+
+  // 中心核心
+  cx.beginPath();
+  cx.arc(cx.canvas.width/2, cx.canvas.height/2, 10, 0, Math.PI * 2);
+  cx.fillStyle = hsl(C.gold.h, 95, 98, 1);
+  cx.shadowColor = '#ffcc44';
+  cx.shadowBlur = 25;
+  cx.fill();
+  cx.shadowBlur = 0;
+}
+
+// 主循环
+function loop() {
+  t++;
+  cx.fillStyle = 'rgba(1,1,5,0.1)';
+  cx.fillRect(0, 0, W, H);
+
+  const gPulse = Math.sin(t * 0.015) * 0.5 + 0.5;
+  const fPulse = Math.sin(t * 0.04) * 0.5 + 0.5;
+
+  // 背景星空
+  for (let i = 0; i < 60; i++) {
+    const sx = ((i * 137.508) % W);
+    const sy = ((i * 97.3 + t * 0.1) % H);
+    const ss = 0.5 + Math.sin(t * 0.02 + i) * 0.5;
+    cx.beginPath();
+    cx.arc(sx, sy, ss, 0, Math.PI * 2);
+    cx.fillStyle = `rgba(255,255,255,${0.1 + ss * 0.15})`;
+    cx.fill();
+  }
+
+  // 轨道
+  ORBITS.forEach(orb => {
+    // 轨道线
+    cx.beginPath();
+    cx.arc(CX, CY, orb.r, 0, Math.PI * 2);
+    cx.strokeStyle = hsl(orb.hue, 30, 25, 0.12);
+    cx.lineWidth = 0.5;
+    cx.stroke();
+
+    for (let i = 0; i < orb.n; i++) {
+      const angle = (Math.PI * 2 / orb.n) * i + t * orb.speed;
+      const x = CX + Math.cos(angle) * orb.r;
+      const y = CY + Math.sin(angle) * orb.r;
+      const bright = 0.5 + Math.sin(t * 0.05 + i * 0.8) * 0.5;
+
+      // 尾迹
+      for (let k = 1; k <= 3; k++) {
+        const tx = CX + Math.cos(angle - orb.speed * k * 5) * orb.r;
+        const ty = CY + Math.sin(angle - orb.speed * k * 5) * orb.r;
+        cx.beginPath();
+        cx.arc(tx, ty, orb.size * (1 - k * 0.25), 0, Math.PI * 2);
+        cx.fillStyle = hsl(orb.hue, 80, 80, orb.glow * bright * (1 - k * 0.3) * 0.3);
+        cx.fill();
+      }
+
+      // 光晕
+      const grd = cx.createRadialGradient(x, y, 0, x, y, orb.size * 4);
+      grd.addColorStop(0, hsl(orb.hue, 90, 85, orb.glow * (0.6 + bright * 0.4)));
+      grd.addColorStop(1, 'transparent');
+      cx.beginPath();
+      cx.arc(x, y, orb.size * 4, 0, Math.PI * 2);
+      cx.fillStyle = grd;
+      cx.fill();
+
+      // 核
+      cx.beginPath();
+      cx.arc(x, y, orb.size * bright, 0, Math.PI * 2);
+      cx.fillStyle = hsl(orb.hue, 90, 95, 0.9);
+      cx.fill();
+    }
+  });
+
+  // 节点网络
+  NODES.forEach((n, i) => {
+    n.pulse = Math.max(0, n.pulse - 0.5);
+    const bright = (Math.sin(t * n.freq + n.phase) * 0.5 + 0.5);
+    if (t % 150 === i % 150) { n.pulse = 18; n.burst = 8; }
+    n.burst = Math.max(0, n.burst - 0.3);
+
+    n.conn.forEach(j => {
+      const o = NODES[j];
+      const d = Math.hypot(n.x - o.x, n.y - o.y);
+      const alpha = (1 - d / 75) * bright * 0.35;
+      cx.beginPath();
+      cx.moveTo(n.x, n.y);
+      cx.lineTo(o.x, o.y);
+      cx.strokeStyle = hsl(n.hue, 55, 55, alpha);
+      cx.lineWidth = 0.3 + bright * 0.4;
+      cx.stroke();
+    });
+
+    const sz = n.r * (0.5 + bright * 0.9);
+    const glowR = sz * 3 + n.pulse;
+    const grd = cx.createRadialGradient(n.x, n.y, 0, n.x, n.y, glowR);
+    grd.addColorStop(0, hsl(n.hue, 85, 90, bright * 0.8 + (n.pulse > 0 ? 0.5 : 0)));
+    grd.addColorStop(1, 'transparent');
+    cx.beginPath();
+    cx.arc(n.x, n.y, glowR, 0, Math.PI * 2);
+    cx.fillStyle = grd;
+    cx.fill();
+
+    cx.beginPath();
+    cx.arc(n.x, n.y, sz, 0, Math.PI * 2);
+    cx.fillStyle = hsl(n.hue, 55, 98, bright);
+    cx.fill();
+  });
+
+  // 粒子
+  PARTS.forEach(p => {
+    const tgt = NODES[p.target];
+    const dx = tgt.x - p.x, dy = tgt.y - p.y;
+    const d = Math.hypot(dx, dy);
+    p.vx += (dx / d) * 0.12;
+    p.vy += (dy / d) * 0.12;
+    p.vx *= 0.91; p.vy *= 0.91;
+    p.x += p.vx; p.y += p.vy;
+    p.life--;
+    if (p.life <= 0 || d < 5) { Object.assign(p, spawn()); return; }
+    const lr = p.life / p.max;
+    cx.beginPath();
+    cx.arc(p.x, p.y, p.sz * lr, 0, Math.PI * 2);
+    cx.fillStyle = hsl(p.hue, 80, 88, lr * 0.65);
+    cx.fill();
+  });
+
+  // 王座
+  drawCrown(cx, CX, CY, 58, fPulse);
+
+  // 边缘文字旋转环
+  const labelR = 285;
+  const allLabels = [
+    ...DECREES,
+    '>>>>>>>>>>>>',
+    '<<<<<<<<<<<<',
+    'NpcGOV',
+    'SOVEREIGN',
+    'SYS://CORE',
+    'NODE://ALL',
+  ];
+  allLabels.forEach((str, i) => {
+    const a = (Math.PI * 2 / allLabels.length) * i - Math.PI / 2 + t * 0.0015;
+    const x = CX + Math.cos(a) * labelR;
+    const y = CY + Math.sin(a) * labelR;
+    cx.save();
+    cx.translate(x, y);
+    cx.rotate(a + Math.PI / 2);
+    const isGold = str.startsWith('Npc') || str.startsWith('SOVEREIGN');
+    cx.fillStyle = isGold
+      ? hsl(C.gold.h, 55, 65, 0.35 + Math.sin(t * 0.04 + i * 0.5) * 0.15)
+      : hsl(C.cyan.h, 50, 55, 0.2 + Math.sin(t * 0.03 + i) * 0.1);
+    cx.font = `bold ${6.5 + Math.sin(t * 0.025 + i) * 1}px Courier New`;
+    cx.textAlign = 'center';
+    cx.textBaseline = 'middle';
+    cx.fillText(str, 0, 0);
+    cx.restore();
+  });
+
+  // 标语
+  cx.fillStyle = hsl(C.gold.h, 60, 70, 0.85);
+  cx.font = 'bold 10px Courier New';
+  cx.textAlign = 'center';
+  cx.shadowColor = hsl(C.gold.h, 90, 70, 0.5);
+  cx.shadowBlur = 8;
+  cx.fillText('NpcGOV · 数据即法律 · 代码即秩序', CX, CY + 92);
+  cx.shadowBlur = 0;
+
+  cx.fillStyle = hsl(C.cyan.h, 50, 50, 0.4);
+  cx.font = '7px Courier New';
+  cx.fillText('ALGORITHMIC SOVEREIGNTY SYSTEM · SOV001', CX, CY + 104);
+
+  // 底部状态条
+  const statusW = 200;
+  const statusH = 3;
+  const sx = CX - statusW / 2;
+  const sy = CY + 118;
+  cx.fillStyle = 'rgba(255,255,255,0.05)';
+  cx.fillRect(sx, sy, statusW, statusH);
+  const fillW = statusW * (0.3 + gPulse * 0.7);
+  const barGrd = cx.createLinearGradient(sx, sy, sx + fillW, sy);
+  barGrd.addColorStop(0, hsl(C.gold.h, 80, 60, 0.5));
+  barGrd.addColorStop(1, hsl(C.cyan.h, 80, 70, 0.7));
+  cx.fillStyle = barGrd;
+  cx.fillRect(sx, sy, fillW, statusH);
+
+  requestAnimationFrame(loop);
+}
+loop();
+</script>
+</body>
+</html>
